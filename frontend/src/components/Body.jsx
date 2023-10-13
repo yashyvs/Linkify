@@ -1,17 +1,33 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import axios from "axios";
+import { AiTwotoneDelete } from "react-icons/ai";
 const Body = () => {
   const [inputLink, setInputLink] = useState("");
   const [shortId, setShortId] = useState("");
   const shortIdRef = useRef(null);
-  
+  const [recentSearches, setRecentSearches] = useState([]);
+
+  useEffect(() => {
+    // Retrieve recent searches from local storage on component load
+    const storedSearches = localStorage.getItem("recentSearches");
+    if (storedSearches) {
+      setRecentSearches(JSON.parse(storedSearches));
+    }
+  }, []);
+
   const handleShortenURL = async () => {
     try {
-      const res = await axios.post("http://localhost:4000/", {
+      const res = await axios.post(import.meta.env.VITE_BASE_URL, {
         url: inputLink,
       });
       // console.log(res.data.id);
       setShortId(res.data.id);
+      const updatedSearches = [
+        { id: res.data.id, search: inputLink },
+        ...recentSearches,
+      ].slice(0, 5); // Store the latest 5 searches
+      setRecentSearches(updatedSearches);
+      localStorage.setItem("recentSearches", JSON.stringify(updatedSearches));
     } catch (err) {
       console.error("Error shortening URL: ", err);
     }
@@ -22,6 +38,11 @@ const Body = () => {
       document.execCommand("copy");
       alert("Link copied to clipboard!");
     }
+  };
+  const handleDeleteSearch = (search) => {
+    const updatedSearches = recentSearches.filter((s) => s.id !== search.id);
+    setRecentSearches(updatedSearches);
+    localStorage.setItem("recentSearches", JSON.stringify(updatedSearches));
   };
 
   return (
@@ -61,6 +82,27 @@ const Body = () => {
               Copy Link
             </button>
           </div>
+        </div>
+      )}
+      {recentSearches.length > 0 && (
+        <div className="mt-4">
+          <p className="text-xl font-semibold">Recent Searches:</p>
+          <ul className="list-disc ml-8">
+            {recentSearches.map((search, index) => (
+              <li key={index}>
+                <strong>URL: </strong>
+                {search.search}
+                <br />
+                <strong>Shorten-URL: </strong>
+                {import.meta.env.VITE_BASE_URL}
+                {search.id}
+                <AiTwotoneDelete
+                  className="inline mx-2 md:my-2 md:mx-5 text-xl cursor-pointer"
+                  onClick={() => handleDeleteSearch(search)}
+                />
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </div>
